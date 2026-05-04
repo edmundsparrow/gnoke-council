@@ -1,5 +1,7 @@
 # Gnoke · Council
 
+**[▶ Live Demo](https://edmundsparrow.github.io/gnoke-council)**
+
 **A multi-AI deliberation thread. One HTML file. No backend. No dependencies. No server.**
 
 You are the moderator. Claude, Gemini, GPT-4o, and Grok are the voices. You decide who speaks and when. You copy their context. You chair the room.
