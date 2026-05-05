@@ -114,3 +114,60 @@ document.getElementById("chatInput").addEventListener("input", function () {
 // ── Init ───────────────────────────────────────────────
 switchIdentity("Claude");
 
+// ── Persistence: Gnoke Spirit ──────────────────────────
+// ── Persistence: Gnoke Spirit ──────────────────────────
+(async () => {
+  const DB_NAME = 'gnoke:council';
+  const openDB  = () => new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME, 1);
+    r.onupgradeneeded = e => e.target.result.createObjectStore('session');
+    r.onsuccess = e => res(e.target.result);
+    r.onerror   = e => rej(e.target.error);
+  });
+
+  const db = await openDB();
+  const put = (k, v) => new Promise((res, rej) => {
+    const r = db.transaction('session','readwrite').objectStore('session').put(v, k);
+    r.onsuccess = res; r.onerror = e => rej(e.target.error);
+  });
+  const get = (k) => new Promise((res, rej) => {
+    const r = db.transaction('session','readonly').objectStore('session').get(k);
+    r.onsuccess = e => res(e.target.result); r.onerror = e => rej(e.target.error);
+  });
+
+  // Restore thread
+  const saved = await get('thread');
+  if (saved?.length) saved.forEach(m => postMessage(m.ai, m.text, m.file));
+
+  // Restore draft
+  const draft = await get('draft');
+  if (draft) {
+    const el = document.getElementById('chatInput');
+    el.value = draft;
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  // Save draft on every keystroke
+  document.getElementById('chatInput').addEventListener('input', () =>
+    put('draft', document.getElementById('chatInput').value)
+  );
+
+  // Save thread + clear draft after send (capture phase runs before send clears input)
+  const persist = () => setTimeout(() => {
+    put('thread', [...thread]);
+    put('draft', '');
+  }, 50);
+
+  document.getElementById('sendBtn').addEventListener('click', persist, true);
+  document.getElementById('chatInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) persist();
+  }, true);
+
+  // Final save on tab hide
+  window.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      put('thread', [...thread]);
+      put('draft', document.getElementById('chatInput').value);
+    }
+  });
+})();
